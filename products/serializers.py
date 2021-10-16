@@ -1,6 +1,7 @@
 from products.models import Category, Products, Raiting, CartProduct, Cart, Order
 
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ModelSerializer, Serializer
+from rest_framework import serializers
 
 class RaitingSerializer(ModelSerializer):
     class Meta:
@@ -15,7 +16,7 @@ class ProductSerializer(ModelSerializer):
 
     class Meta:
         model = Products
-        fields = ['id', 'category', 'name_product', 'composition', 'price', 'inStock', 'articul', 'raiting_general']
+        fields = ['id', 'category', 'name_product', 'amount', 'composition', 'price', 'inStock', 'articul', 'raiting_general']
         read_only_fields = ['category','raiting_general']
         
 
@@ -42,5 +43,9 @@ class CartProductSerializer(ModelSerializer):
 
     class Meta:
         model = CartProduct
-        fields = ['id', 'product', 'quantity_product', 'general_price', 'customer']
-        read_only_fields = ['product', 'quantity_product', 'general_price', 'customer']
+        fields = ['id', 'product', 'quantity_product', 'general_price']
+        read_only_fields = ['product', 'quantity_product', 'general_price']
+
+class AmountSerializer(Serializer):
+    
+    amount = serializers.IntegerField()

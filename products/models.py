@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
 from django.utils import timezone
 from django.dispatch import receiver
 
@@ -29,6 +30,10 @@ class Products(models.Model):
     composition = models.CharField(
                                     max_length=1027,
                                     verbose_name='Состав')
+    amount = models.PositiveIntegerField(
+                                        default=0,
+                                        verbose_name='Количество продукта в наличае',
+                                        null=True)
     price = models.PositiveIntegerField(
                                     default= 0,
                                     verbose_name='Цена продукта')
@@ -85,12 +90,11 @@ class Raiting(models.Model):
 
 class Cart(models.Model):
     
-    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='order')
+    customer = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
     cart_product = models.ManyToManyField(Products, through='CartProduct')
     sum_price = models.PositiveIntegerField(default=0)
 
-    def __str__(self):
-        return f'В корзине {self.cart_product}'
+
 
 
 class CartProduct(models.Model):
@@ -100,8 +104,6 @@ class CartProduct(models.Model):
     quantity_product = models.PositiveIntegerField(default=0)
     general_price = models.PositiveIntegerField(default=0)
 
-    def __str__(self):
-        return f'{self.product.name_product}'
 
 class Order(models.Model):
     class OrderStatus(models.TextChoices):
@@ -116,3 +118,8 @@ class Order(models.Model):
 
     def __str__(self):
         return f'{self.customer.username} - {self.adress}'
+
+@receiver(post_save, sender=User)
+def create_cart(sender, instance, created, **kwargs):
+    if created:
+        Cart.objects.create(customer=instance)
