@@ -5,9 +5,7 @@ from django.utils import timezone
 from django.dispatch import receiver
 
 
-
 User = get_user_model()
-
 
 
 class Category(models.Model):
@@ -89,11 +87,11 @@ class Raiting(models.Model):
 
 
 class Cart(models.Model):
-    
-    customer = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
-    cart_product = models.ManyToManyField(Products, through='CartProduct')
-    sum_price = models.PositiveIntegerField(default=0)
 
+
+    customer = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
+    cart_product = models.ManyToManyField(Products, through='CartProduct', related_name='products')
+    sum_price = models.PositiveIntegerField(default=0)
 
 
 

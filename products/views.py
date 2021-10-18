@@ -3,16 +3,18 @@ from products.models import (
                             Products, 
                             Raiting, 
                             CartProduct, 
+                            Cart,
                             Order)
 from products.serializers import (
                             CategorySerializer, 
                             ProductSerializer, 
                             RaitingSerializer,
-                            AmountSerializer)
+                            AmountSerializer,
+                            CartSerializer)
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter
-from rest_framework.decorators import action
+from rest_framework.decorators import action, permission_classes
 from rest_framework.response import Response
 from rest_framework.status import (
                                     HTTP_200_OK,
@@ -93,7 +95,7 @@ class ProductsViewSet(ModelViewSet):
     @action(
         permission_classes = [IsAuthenticated, ],
         serializer_class = AmountSerializer,
-        methods = ['post', 'delete'],
+        methods = ['post', ],
         detail = True)
     def cart(self, request, *args, **kwargs):
         product = self.get_object()
@@ -120,6 +122,7 @@ class ProductsViewSet(ModelViewSet):
                     return Response({'Error': 'Requested amount is not be zero'})
                 else:
                     cart_product.quantity_product = requested_amount
+                    cart_product.general_price = (product.price * requested_amount)
                     product.amount -= requested_amount
                     product.save()
 
@@ -129,31 +132,44 @@ class ProductsViewSet(ModelViewSet):
 
                 if requested_amount > now_amount:
                     cart_product.quantity_product = requested_amount
+                    cart_product.general_price = (product.price * requested_amount)
                     cart_product.save()
                     product.amount -= (requested_amount-now_amount)
                     product.save()
-                    serializer = ProductSerializer(instance=product)
+                    # serializer = ProductSerializer(instance=product)
+                    # return Response(serializer.data)
+                    serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
                 elif requested_amount == now_amount:
-                    serializer = ProductSerializer(instance=product)
+                    # serializer = ProductSerializer(instance=product)
+                    # return Response(serializer.data)
+                    serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
                 elif requested_amount == 0:
                     cart_product.delete()
                     product.amount += now_amount
                     product.save()
-                    serializer = ProductSerializer(instance=product)
+                    # serializer = ProductSerializer(instance=product)
+                    # return Response(serializer.data)
+                    serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
                 else:
                     cart_product.quantity_product = requested_amount
+                    cart_product.general_price = (product.price * requested_amount)
                     cart_product.save()
                     product.amount += (now_amount-requested_amount)
                     product.save()
-                    serializer = ProductSerializer(instance=product)
+                    # serializer = ProductSerializer(instance=product)
+                    # return Response(serializer.data)
+                    serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
             cart_product.save()
-            serializer = ProductSerializer(instance=product)
+            # serializer = ProductSerializer(instance=product)
+            # return Response(serializer.data)
+            serializer = CartSerializer(instance=cart)
             return Response(serializer.data)
+

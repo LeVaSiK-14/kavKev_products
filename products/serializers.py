@@ -1,3 +1,4 @@
+from rest_framework.fields import ReadOnlyField
 from products.models import Category, Products, Raiting, CartProduct, Cart, Order
 
 from rest_framework.serializers import ModelSerializer, Serializer
@@ -21,7 +22,6 @@ class ProductSerializer(ModelSerializer):
         
 
 
-
 class CategorySerializer(ModelSerializer):
 
     products = ProductSerializer(many=True, read_only=True)
@@ -31,20 +31,29 @@ class CategorySerializer(ModelSerializer):
 
 
 
-class CartSerializer(ModelSerializer):
-    # cart_product = ProductSerializer(many=True)
 
-    class Meta:
-        model = Cart
-        fields = ['id', 'customer', 'cart_product', 'sum_price']
-        read_only_fields = ['customer', 'cart_product', 'sum_price']
 
 class CartProductSerializer(ModelSerializer):
 
     class Meta:
         model = CartProduct
-        fields = ['id', 'product', 'quantity_product', 'general_price']
-        read_only_fields = ['product', 'quantity_product', 'general_price']
+        fields = ['id', 'product', 'quantity_product', 'general_price', ]
+        read_only_fields = ['product', 'quantity_product', 'general_price', ]
+
+
+class CartSerializer(ModelSerializer):
+
+
+    # product = serializers.ReadOnlyField(source='cart_product.product')
+    cart_product = CartProductSerializer(many=True, read_only=True)
+    author = serializers.ReadOnlyField(source='customer.username')
+
+    class Meta:
+        model = Cart
+        fields = ['id', 'author', 'cart_product', 'sum_price', ]
+        read_only_fields = ['sum_price', 'cart_product']
+
+
 
 class AmountSerializer(Serializer):
     
