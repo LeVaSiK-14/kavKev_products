@@ -10,12 +10,17 @@ from products.serializers import (
                             ProductSerializer, 
                             RaitingSerializer,
                             AmountSerializer,
-                            CartSerializer)
+                            CartSerializer,
+                            OrderSerializer,
+                            RegistrationSerializer)
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter
-from rest_framework.decorators import action, permission_classes
+from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.generics import (
+                                    RetrieveAPIView)
+from rest_framework.views import APIView
 from rest_framework.status import (
                                     HTTP_200_OK,
                                     HTTP_400_BAD_REQUEST,
@@ -26,6 +31,11 @@ from rest_framework.permissions import (
                                     IsAuthenticatedOrReadOnly)
 
 from django_filters import rest_framework as django_filter
+from rest_framework.authtoken.models import Token
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class CategoryViewSet(ModelViewSet):
@@ -40,7 +50,6 @@ class CategoryViewSet(ModelViewSet):
             detail=True, 
             permission_classes = [IsAdminUser, ], 
             serializer_class = ProductSerializer)
-
     def add_product(self, request, *args, **kwargs):
         category = self.get_object()
         serializer = self.get_serializer_class()(data = request.data)
@@ -60,7 +69,6 @@ class ProductsViewSet(ModelViewSet):
             detail=True, 
             serializer_class = RaitingSerializer, 
             permission_classes=[IsAuthenticated, ])
-
     def add_raiting(self, request, *args, **kwargs):
         product = self.get_object()
         appraiser = request.user
@@ -136,14 +144,18 @@ class ProductsViewSet(ModelViewSet):
                     cart_product.save()
                     product.amount -= (requested_amount-now_amount)
                     product.save()
-                    # serializer = ProductSerializer(instance=product)
-                    # return Response(serializer.data)
+                    genPrice = CartProduct.objects.filter(cart=cart).values_list('general_price', flat=True)
+                    genPrice = sum(genPrice)
+                    cart.sum_price = genPrice
+                    cart.save()
                     serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
                 elif requested_amount == now_amount:
-                    # serializer = ProductSerializer(instance=product)
-                    # return Response(serializer.data)
+                    genPrice = CartProduct.objects.filter(cart=cart).values_list('general_price', flat=True)
+                    genPrice = sum(genPrice)
+                    cart.sum_price = genPrice
+                    cart.save()
                     serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
@@ -151,8 +163,10 @@ class ProductsViewSet(ModelViewSet):
                     cart_product.delete()
                     product.amount += now_amount
                     product.save()
-                    # serializer = ProductSerializer(instance=product)
-                    # return Response(serializer.data)
+                    genPrice = CartProduct.objects.filter(cart=cart).values_list('general_price', flat=True)
+                    genPrice = sum(genPrice)
+                    cart.sum_price = genPrice
+                    cart.save()
                     serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
@@ -162,14 +176,107 @@ class ProductsViewSet(ModelViewSet):
                     cart_product.save()
                     product.amount += (now_amount-requested_amount)
                     product.save()
-                    # serializer = ProductSerializer(instance=product)
-                    # return Response(serializer.data)
+                    genPrice = CartProduct.objects.filter(cart=cart).values_list('general_price', flat=True)
+                    genPrice = sum(genPrice)
+                    cart.sum_price = genPrice
+                    cart.save()
                     serializer = CartSerializer(instance=cart)
                     return Response(serializer.data)
 
             cart_product.save()
-            # serializer = ProductSerializer(instance=product)
-            # return Response(serializer.data)
+            genPrice = CartProduct.objects.filter(cart=cart).values_list('general_price', flat=True)
+            genPrice = sum(genPrice)
+            cart.sum_price = genPrice
+            cart.save()
             serializer = CartSerializer(instance=cart)
             return Response(serializer.data)
 
+class CartViewSet(ModelViewSet):
+    queryset = Cart.objects.all()
+    serializer_class = CartSerializer
+    permission_classes = [IsAuthenticated, ]
+
+    def get_queryset(self):
+        return Cart.objects.filter(customer=self.request.user)
+
+
+    @action(
+        methods = ['post', ],
+        detail = False,
+        permission_classes = [IsAuthenticated, ],
+        serializer_class = OrderSerializer)
+    def create_order(self, request, *args, **kwargs):
+        cart = request.user.cart
+
+        serializer = OrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        cart_prod = CartSerializer(instance=cart)
+        print(cart_prod.data)
+        order = Order.objects.create(
+                                cart=cart,
+                                cart_prod=cart_prod.data,
+                                adress=data['adress'],
+                                status=data['status'])
+        order.save()
+
+        serializer = OrderSerializer(instance=order)
+
+        cart.cart_product.clear()
+        cart.sum_price = 0
+
+        cart.save()                
+
+        return Response(serializer.data)
+
+
+class OrderViewSet(ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, ]
+
+    @action(methods=['get', 'post', ], detail=True, )
+    def order_status_success(self, request, *args, **kwargs):
+        order = self.get_object()
+        user = request.user
+        if order.cart.customer == user:
+            order.status = 'Успешно доставлен'
+            order.save()
+
+            return Response({'Status': 'Успешно доставлен'})
+
+
+    @action(methods=['get', 'post', ], detail=True, )
+    def order_status_cancel(self, request, *args, **kwargs):
+        order = self.get_object()
+        user = request.user
+        if order.cart.customer == user:
+            order.status = 'Отменён'
+            order.save()
+
+            return Response({'Status': 'Отменён'})
+
+
+class RegistrationAPIView(APIView):
+
+    def post(self, request):
+        serializer = RegistrationSerializer(data = request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        username = data.get('username')
+        password = data.get('password')
+
+        if User.objects.filter(username=username).exists():
+            return Response({'Message': 'User with such username is already exists'})
+
+        user = User.objects.create_user(username=username, password=password)
+
+        token = Token.objects.create(user=user)
+
+        return Response({'token': token.key})
+
+#         {
+# "username": "levasik",
+# "password": "qwerty12345"
+# }

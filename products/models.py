@@ -51,9 +51,6 @@ class Products(models.Model):
     def __str__(self):
         return f'{self.category.category} - {self.name_product}'
 
-    # class Meta:
-    #     ordering = ['-raiting_general', ]
-        
 
 class RaitingStar(models.Model):
     value = models.SmallIntegerField(default=0)
@@ -105,17 +102,15 @@ class CartProduct(models.Model):
 
 class Order(models.Model):
     class OrderStatus(models.TextChoices):
-        SUCCSESS = 'Успешно доставлен'
         IN_PENDING = 'В ожидании доставки'
+        SUCCSESS = 'Успешно доставлен'
         CANCELED = 'Отменён'
-
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='order')
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, verbose_name='Корзина')
+    cart_prod = models.CharField(max_length=2047)
     created_at = models.DateTimeField(default=timezone.now)
     adress = models.CharField('Адрес', max_length=255)
-    status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.SUCCSESS)
+    status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.IN_PENDING)
 
-    def __str__(self):
-        return f'{self.customer.username} - {self.adress}'
 
 @receiver(post_save, sender=User)
 def create_cart(sender, instance, created, **kwargs):
