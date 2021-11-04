@@ -22,6 +22,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('products.urls')),
+    path('api/', include('order.urls')),
     path('rest-auth/', include('rest_auth.urls')),
     path('api/swagger/', schema_view.with_ui(), name='schema-json'),
 ]

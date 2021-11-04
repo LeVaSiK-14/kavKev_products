@@ -110,6 +110,14 @@ class Order(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     adress = models.CharField('Адрес', max_length=255)
     status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.IN_PENDING)
+    sum_price = models.PositiveIntegerField(default=0, null=True)
+    products = models.ManyToManyField(Products, through='OrderProduct')
+
+class OrderProduct(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_products')
+    product = models.ForeignKey(Products, on_delete=models.CASCADE,
+                                related_name='order_products')
+    amount = models.IntegerField()
 
 
 @receiver(post_save, sender=User)

@@ -1,7 +1,9 @@
+from django.core import exceptions
 from products.models import Category, Products, Raiting, CartProduct, Cart, Order
 
 from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework import serializers
+from rest_framework import exceptions
 
 class RaitingSerializer(ModelSerializer):
     class Meta:
@@ -51,7 +53,7 @@ class CartSerializer(ModelSerializer):
 
 
 class AmountSerializer(Serializer):
-    
+
     amount = serializers.IntegerField()
 
 
@@ -61,9 +63,17 @@ class OrderSerializer(ModelSerializer):
     cart = CartSerializer(read_only=True)
     class Meta:
         model = Order
-        fields = ['cart', 'cart_prod', 'created_at', 'adress', 'status', ]
-        read_only_fields = ['cart', 'created_at', 'cart_prod', ]
+        fields = ['id', 'cart', 'sum_price', 'cart_prod', 'created_at', 'adress', 'status', ]
+        read_only_fields = ['cart', 'sum_price', 'created_at', 'cart_prod', ]
+
 
 class RegistrationSerializer(Serializer):
     username = serializers.CharField()
     password = serializers.CharField()
+
+    def validated_password(self, value):
+        if len(value) < 5:
+            raise exceptions.ValidationError('Password is too short')
+        elif len(value) > 20:
+            raise exceptions.ValidationError('Password is too long')
+        return value

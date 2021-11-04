@@ -212,11 +212,20 @@ class CartViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        cart_prod = CartSerializer(instance=cart)
-        print(cart_prod.data)
+        cart_data = []
+        
+        for i in cart.cartproduct_set.all():
+            cart_products = {}
+            cart_products['id_product'] = i.product.id
+            cart_products['name_product'] = i.product.name_product
+            cart_products['quantity_product'] = i.quantity_product
+            cart_products['general_price'] = i.general_price
+            cart_data.append(cart_products)
+
         order = Order.objects.create(
                                 cart=cart,
-                                cart_prod=cart_prod.data,
+                                cart_prod=cart_data,
+                                sum_price=cart.sum_price,
                                 adress=data['adress'],
                                 status=data['status'])
         order.save()
@@ -229,33 +238,6 @@ class CartViewSet(ModelViewSet):
         cart.save()                
 
         return Response(serializer.data)
-
-
-class OrderViewSet(ModelViewSet):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, ]
-
-    @action(methods=['get', 'post', ], detail=True, )
-    def order_status_success(self, request, *args, **kwargs):
-        order = self.get_object()
-        user = request.user
-        if order.cart.customer == user:
-            order.status = 'Успешно доставлен'
-            order.save()
-
-            return Response({'Status': 'Успешно доставлен'})
-
-
-    @action(methods=['get', 'post', ], detail=True, )
-    def order_status_cancel(self, request, *args, **kwargs):
-        order = self.get_object()
-        user = request.user
-        if order.cart.customer == user:
-            order.status = 'Отменён'
-            order.save()
-
-            return Response({'Status': 'Отменён'})
 
 
 class RegistrationAPIView(APIView):
@@ -276,7 +258,7 @@ class RegistrationAPIView(APIView):
 
         return Response({'token': token.key})
 
-#         {
+# {
 # "username": "levasik",
 # "password": "qwerty12345"
 # }
